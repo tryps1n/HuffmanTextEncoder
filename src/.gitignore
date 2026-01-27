@@ -1,0 +1,15 @@
+#executables
+.out
+gtf
+
+#build directories
+build/
+bin/
+dist/
+
+#IDE files
+.vscode/
+
+#Object files
+*.o
+*.out
