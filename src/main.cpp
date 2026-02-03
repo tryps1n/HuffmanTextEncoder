@@ -55,8 +55,10 @@ int main(int argc, char* argv[])
         build_Huffman_table(root, "0", hufftable);
 
         string encoded = Huffman_Encode(plain);
-        
-        fstream outfile(arg[1]+".bin", ios::binary | ios::out);
+        string com_file_name(arg[1].begin(), arg[1].end()-4);
+        com_file_name += ".huff";
+
+        fstream outfile(com_file_name, ios::binary | ios::out);
 
         write_bin_to_file(outfile, encoded);
 
@@ -66,7 +68,7 @@ int main(int argc, char* argv[])
         
         // debug
 
-        fstream binfile(arg[1]+".bin", ios::binary | ios::in);
+        fstream binfile(com_file_name, ios::binary | ios::in);
         if (!binfile.is_open())
         {
             cerr << "Error opening file";
