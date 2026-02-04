@@ -69,15 +69,15 @@ void build_Huffman_table(Node* node, string code, unordered_map<char, string>& h
     build_Huffman_table(node->right, code+"0", huff);
 }
 
-unordered_map<char, int> count_freq_string(string s){
-    unordered_map<char, int> dict;
+unordered_map<char, uint32_t> count_freq_string(string s){
+    unordered_map<char, uint32_t> dict;
     for(char c : s){
         dict[c]++;
     }
     return dict;
 }
 
-vector<Node*> nodes_from_freq(unordered_map<char, int>& dict){
+vector<Node*> nodes_from_freq(unordered_map<char, uint32_t>& dict){
     vector<Node*> nodes;
     for(const auto& x : dict){
         Node* node = new Node();
@@ -89,7 +89,7 @@ vector<Node*> nodes_from_freq(unordered_map<char, int>& dict){
 }
 
 string Huffman_Encode(string s){
-    unordered_map<char, int> freq = count_freq_string(s);
+    unordered_map<char, uint32_t> freq = count_freq_string(s);
     vector<Node*> nodes = nodes_from_freq(freq);
 
     Node* huff_tree = build_Huffman_Tree(nodes);

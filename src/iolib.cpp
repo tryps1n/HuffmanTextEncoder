@@ -1,11 +1,39 @@
 #include "bits/stdc++.h"
 #include "fstream"
+#include <cstdint>
 #include <fstream>
+#include <ostream>
+#include <string>
+#include <unordered_map>
 
 using namespace std;
 
-void write_bin_to_file(fstream& file, string bits)
+#pragma pack(push, 1)
+struct Header 
 {
+    unsigned char magic_number[4] = {'H', 'U', 'F', 'F'};
+    uint32_t freq_table_entries;
+    uint32_t byte_number;
+    int padding_size;
+};
+#pragma pack(pop)
+
+void write_bin_to_file(fstream& file, string bits, unordered_map<char, uint32_t>& freq_table)
+{
+    Header header;
+    header.byte_number = bits.size();
+    header.freq_table_entries = freq_table.size();
+    header.padding_size = 8 - (bits.size() % 8);
+    file.write(reinterpret_cast<char*>(&header), sizeof(header));
+    //writes header class into file. 
+
+    for (const auto& p : freq_table)
+    {
+        file.write(reinterpret_cast<const char*>(&p.first), 1);
+        file.write(reinterpret_cast<const char*>(&p.second), 4);
+    }
+    //writes unordered_map data
+
     unsigned char current_byte; int bit_position = 0;
     // create empty byte using unsigned char, which holds one byte
     for (char c : bits)
@@ -16,22 +44,52 @@ void write_bin_to_file(fstream& file, string bits)
         // (c-'0') gives binary for either 1 or 0, since c can be either '1' or '0'
         bit_position++;
 
-        if (bit_position == 8){
+        if (bit_position == 8)
+        {
             file.write(reinterpret_cast<char*>(&current_byte), 1);
             // write the byte into the bin file by casting unsigned char pointer into a
             // char pointer pointing to the address, write 1 bit starting from address
             current_byte = 0; bit_position = 0;
         }
     }
+    if (bit_position != 0)
+    {
+        current_byte <<= 8 - bit_position;
+        file.write(reinterpret_cast<char*>(&current_byte), 1);
+    }
 }
 
-string read_bin_from_file(fstream& file)
+string read_bin_from_file(fstream& file, unordered_map<char, uint32_t>& frequency_table)
 {
     // save current position
     std::streampos originalPos = file.tellg();
     
     // go to beginning to read everything
     file.seekg(0, std::ios::beg);
+
+    Header header;
+    if (file.read(reinterpret_cast<char*>(&header), sizeof(Header)))
+    // read bytes of size Header class and put into the memory address of header
+    {
+        string magic(reinterpret_cast<const char*>(header.magic_number), 4);
+        if (magic != "HUFF")
+        {
+            return "\0";
+        }   
+        uint32_t freqnumber = header.freq_table_entries;
+        uint32_t bytenumber = header.byte_number;
+        int padding = header.padding_size;
+        // read a total of 5 * freqnumber bytes
+        char tempchar; int tempfreq;
+        for (uint32_t i=0; i<freqnumber; ++i)
+        {
+            file.read(reinterpret_cast<char*>(&tempchar), 1);
+            file.read(reinterpret_cast<char*>(&tempfreq), 4);
+
+            frequency_table[tempchar] = tempfreq;
+        }
+
+    }
 
     string output = "";
     unsigned char byte;

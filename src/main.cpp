@@ -1,7 +1,9 @@
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include "fstream"
+#include <unordered_map>
 #include <vector>
 #include "hufflib.cpp"
 #include "iolib.cpp"
@@ -33,6 +35,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    string file_name(arg[1].begin(), arg[1].end()-4);
+    file_name += ".huff";
+
     if (arg[0] == "-e")
     {
         ifstream infile(path_to_in_file);
@@ -47,7 +52,7 @@ int main(int argc, char* argv[])
             plain += line;
         }
 
-        unordered_map<char, int> huff_freq = count_freq_string(plain);
+        unordered_map<char, uint32_t> huff_freq = count_freq_string(plain);
         vector<Node*> nodes = nodes_from_freq(huff_freq);
         Node* root = build_Huffman_Tree(nodes);
 
@@ -56,9 +61,9 @@ int main(int argc, char* argv[])
 
         string encoded = Huffman_Encode(plain);
         
-        fstream outfile(arg[1]+".bin", ios::binary | ios::out);
+        fstream outfile(file_name, ios::binary | ios::out);
 
-        write_bin_to_file(outfile, encoded);
+        write_bin_to_file(outfile, encoded, huff_freq);
 
         outfile.close();
 
@@ -66,7 +71,7 @@ int main(int argc, char* argv[])
         
         // debug
 
-        fstream binfile(arg[1]+".bin", ios::binary | ios::in);
+        fstream binfile(file_name, ios::binary | ios::in);
         if (!binfile.is_open())
         {
             cerr << "Error opening file";
@@ -76,7 +81,26 @@ int main(int argc, char* argv[])
         string decoded, bindata;
     }
     else if (arg[0] == "-d") {
-        // smth
+        fstream binfile(arg[1], ios::binary | ios::in);
+        if (!binfile.is_open())
+        {
+            cerr << "Error opening file" << endl;
+            return 1;
+        }
+        unordered_map<char, uint32_t> frequency_map;
+        string bin_from_file = read_bin_from_file(binfile, frequency_map);
+        
+        vector<Node*> nodes = nodes_from_freq(frequency_map);
+        Node* huffmantree = build_Huffman_Tree(nodes);
+        unordered_map<char, string> huff;
+        build_Huffman_table(huffmantree, "0", huff);
+        
+        string plaintext = Huffman_Decode(bin_from_file, huff);
+        cout << plaintext << endl;
+
+        fstream plainoutfile(arg[1]+".txt", ios::out);
+        
+        plainoutfile.write(reinterpret_cast<char*>(&plaintext[0]), plaintext.size());
     }  
     else
     {   
