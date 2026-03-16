@@ -12,15 +12,6 @@ struct Node {
     Node* parent = nullptr;
 };
 
-void preorder(Node* root){
-    cout << root->value;
-    if(root->c) cout << root->c;
-    cout << ' ';
-
-    if(root->right) preorder(root->right);
-    if(root->left) preorder(root->left);
-}
-
 Node* addNodes(Node* a, Node* b){
     Node* c = new Node();
     c->value = a->value + b->value;
@@ -36,6 +27,31 @@ Node* addNodes(Node* a, Node* b){
     return c;
 }
 
+void delete_tree(Node* node) {
+    if (!node) return;
+    delete_tree(node->left);
+    delete_tree(node->right);
+    delete node;
+}
+
+vector<Node*> nodes_from_freq(unordered_map<char, uint32_t>& dict){
+    vector<Node*> nodes;
+    for(const auto& x : dict){
+        Node* node = new Node();
+        node->c = x.first;
+        node->value = x.second;
+        nodes.push_back(node);
+    }
+    return nodes;
+}
+
+bool comp(Node* x, Node* y)
+    {
+        if (x->value = y->value) return x->c < y->c;
+        else return x->value < y->value;
+        
+    }
+
 Node* build_Huffman_Tree(vector<Node*> trees){
     if(trees.size() < 2) return trees[0];
     
@@ -43,9 +59,11 @@ Node* build_Huffman_Tree(vector<Node*> trees){
     Node* a = nullptr;
     Node* b = nullptr;
 
+    
+
     while(trees.size() > 1){
 
-        sort(trees.begin(), trees.end(), [](Node* x, Node* y){return x->value < y->value;});
+        sort(trees.begin(), trees.end(), comp);
         
         a = trees[0]; b = trees[1];
         trees.push_back(addNodes(a, b));
@@ -69,33 +87,22 @@ void build_Huffman_table(Node* node, string code, unordered_map<char, string>& h
     build_Huffman_table(node->right, code+"0", huff);
 }
 
-unordered_map<char, int> count_freq_string(string s){
-    unordered_map<char, int> dict;
+unordered_map<char, uint32_t> count_freq_string(string s){
+    unordered_map<char, uint32_t> dict;
     for(char c : s){
         dict[c]++;
     }
     return dict;
 }
 
-vector<Node*> nodes_from_freq(unordered_map<char, int>& dict){
-    vector<Node*> nodes;
-    for(const auto& x : dict){
-        Node* node = new Node();
-        node->c = x.first;
-        node->value = x.second;
-        nodes.push_back(node);
-    }
-    return nodes;
-}
-
 string Huffman_Encode(string s){
-    unordered_map<char, int> freq = count_freq_string(s);
+    unordered_map<char, uint32_t> freq = count_freq_string(s);
     vector<Node*> nodes = nodes_from_freq(freq);
 
     Node* huff_tree = build_Huffman_Tree(nodes);
 
     unordered_map<char, string> huffcodes;
-    build_Huffman_table(huff_tree, "0", huffcodes);
+    build_Huffman_table(huff_tree, "", huffcodes);
 
     string huff_code;
 
@@ -103,6 +110,7 @@ string Huffman_Encode(string s){
         huff_code += huffcodes[c];
     }
 
+    delete_tree(huff_tree);
     return huff_code;
 }
 

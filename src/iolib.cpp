@@ -1,52 +1,52 @@
 #include "bits/stdc++.h"
 #include "fstream"
 #include <cstdint>
-#include <sys/types.h>
+#include <fstream>
+#include <ostream>
+#include <string>
 #include <unordered_map>
 
 using namespace std;
 
 #pragma pack(push, 1)
-struct file_header 
+struct Header 
 {
-    unsigned char magic_number[4] = {
-        'H', 'U', 'F', 'F'
-    };
-    uint32_t mapNumber;
-    uint32_t dataBits;
-    int padding;
-    // number of entries in freq table
+    unsigned char magic_number[4] = {'H', 'U', 'F', 'F'};
+    uint32_t freq_table_entries;
+    uint32_t bit_number;
+    uint8_t padding_size;
 };
 #pragma pack(pop)
 
-void write_bin_to_file(fstream& file, string bits, unordered_map<char, int>& freq_table)
+void write_bin_to_file(fstream& file, string bits, unordered_map<char, uint32_t>& freq_table)
 {
-    file_header header;
-    header.mapNumber = freq_table.size();
-    header.dataBits = bits.length();
-    header.padding = 8 - (bits.length() % 8);
+    Header header;
+    header.bit_number = bits.size();
+    header.freq_table_entries = freq_table.size();
+    header.padding_size = (8 - (bits.size() % 8)) % 8;
     file.write(reinterpret_cast<char*>(&header), sizeof(header));
-    //writes header class into file
+    //writes header class into file. 
 
-    for (const auto& pair : freq_table){
-        char char_val = pair.first;
-        int freq = pair.second;
-        file.write(reinterpret_cast<const char*>(&char_val), 1);
-        file.write(reinterpret_cast<const char*>(&freq), 4);
+    for (const auto& p : freq_table)
+    {
+        file.write(reinterpret_cast<const char*>(&p.first), 1);
+        file.write(reinterpret_cast<const char*>(&p.second), 4);
     }
-    //writes freq table data into the file.
+    //writes unordered_map data
 
-    unsigned char current_byte = 0; int bit_position = 0; 
+    unsigned char current_byte = 0; int bit_position = 0;
     // create empty byte using unsigned char, which holds one byte
+    
     for (char c : bits)
     {
         current_byte = (current_byte << 1) | (c - '0'); 
         // shift current_byte by 1 to make room for new bit
         // bitwise OR -> add one byte to the newly created 0 at the right
         // (c-'0') gives binary for either 1 or 0, since c can be either '1' or '0'
-        bit_position++; 
+        bit_position++;
 
-        if (bit_position == 8){
+        if (bit_position == 8)
+        {
             file.write(reinterpret_cast<char*>(&current_byte), 1);
             // write the byte into the bin file by casting unsigned char pointer into a
             // char pointer pointing to the address, write 1 bit starting from address
@@ -55,18 +55,41 @@ void write_bin_to_file(fstream& file, string bits, unordered_map<char, int>& fre
     }
     if (bit_position != 0)
     {
-        current_byte <<= (8 - bit_position); //shifts to MSB
+        current_byte <<= 8 - bit_position;
         file.write(reinterpret_cast<char*>(&current_byte), 1);
     }
 }
 
-string read_bin_from_file(fstream& file)
+string read_bin_from_file(fstream& file, unordered_map<char, uint32_t>& frequency_table)
 {
-    // save current position
-    std::streampos originalPos = file.tellg();
+    file.seekg(0, ios::beg);
     
-    // go to beginning to read everything
-    file.seekg(0, std::ios::beg);
+    Header header;
+    if (!file.read(reinterpret_cast<char*>(&header), sizeof(Header)))
+    {
+        cout << "cannot read file header." << endl;
+        return "";
+    }
+    // read bytes of size Header class and put into the memory address of header
+    
+    string magic(reinterpret_cast<const char*>(header.magic_number), 4);
+    if (magic != "HUFF")
+    {
+        return "\0";
+    }   
+    uint32_t freqnumber = header.freq_table_entries;
+    uint32_t bitnumber = header.bit_number;
+    uint8_t padding = header.padding_size;
+    // read a total of 5 * freqnumber bytes
+
+    char ch; uint32_t f;
+    for (uint32_t i=0; i<freqnumber; ++i)
+    {
+        file.read(reinterpret_cast<char*>(&ch), 1);
+        file.read(reinterpret_cast<char*>(&f), 4);
+
+        frequency_table[ch] = f;
+    }
 
     string output = "";
     unsigned char byte;
@@ -78,17 +101,15 @@ string read_bin_from_file(fstream& file)
         {
             unsigned char mask = 1 << i;
             // create mask bit by left shifting 1 by i, to check i'th bit
-            if (byte & mask) // check using bitwise AND with bit in consideration
-            {
-                output += '1';
-            }
-            else 
-            {
-                output += '0';
-            }
+            if (byte & mask) output += '1'; // check using bitwise AND with bit in consideration
+            else output += '0'; 
         }
     }
-    file.seekg(originalPos);
+    // remove padding bits
+    if (padding > 0 && padding < 8 && bitnumber > padding)
+    {
+        output = output.substr(0, output.length() - padding);
+    }
+    file.close();
     return output;
 }
-
