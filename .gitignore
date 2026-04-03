@@ -1,15 +1,5 @@
-#executables
-*.out
-main
-*.bin
-
 #build directories
-build/
-bin/
-dist/
-
-#IDE files
-.vscode/
+/bin/
 
 #Object files
 *.o
